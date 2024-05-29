@@ -1,14 +1,15 @@
 package main
 
 import (
+	"encoding/json"
+	"net/http"
+
 	"github.com/aws/aws-lambda-go/events"
 	"github.com/aws/aws-lambda-go/lambda"
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/aws/session"
 	"github.com/aws/aws-sdk-go/service/dynamodb"
 	"github.com/aws/aws-sdk-go/service/dynamodb/dynamodbattribute"
-	"encoding/json"
-	"net/http"
 )
 
 var (
@@ -92,12 +93,80 @@ func putItem(request events.APIGatewayProxyRequest) (events.APIGatewayProxyRespo
 	}, nil
 }
 
+func updateItem(request events.APIGatewayProxyRequest) (events.APIGatewayProxyResponse, error){
+	item := Item{}
+	err := json.Unmarshal([]byte(request.Body), &item)
+	if err != nil {
+		return events.APIGatewayProxyResponse{
+			StatusCode: http.StatusBadRequest,
+			Body: err.Error(),
+		}, nil
+	}
+	input := dynamodb.UpdateItemInput{
+		TableName: aws.String(tableName),
+		Key: map[string]*dynamodb.AttributeValue{
+			"id": {
+				S: aws.String(item.ID),
+			},
+		},
+	}
+
+	_, err = dynamoDb.UpdateItem(&input)
+	if err != nil {
+		return events.APIGatewayProxyResponse{
+			StatusCode: http.StatusBadRequest,
+			Body: err.Error(),
+		}, nil
+	}
+
+	return events.APIGatewayProxyResponse{
+		StatusCode: http.StatusNoContent,
+		Body: "アイテムが更新されました。",
+	}, nil
+}
+
+func deleteItem(request events.APIGatewayProxyRequest) (events.APIGatewayProxyResponse, error){
+	item := Item{}
+	err := json.Unmarshal([]byte(request.Body), &item)
+	if err != nil {
+		return events.APIGatewayProxyResponse{
+			StatusCode: http.StatusBadRequest,
+			Body: err.Error(),
+		}, nil
+	}
+
+	input := dynamodb.DeleteItemInput{
+		TableName: aws.String(tableName),
+		Key: map[string] *dynamodb.AttributeValue{
+			"id": {
+				S: aws.String(item.ID),
+			},
+		},
+	}
+	_, err = dynamoDb.DeleteItem(&input)
+	if err != nil {
+		return events.APIGatewayProxyResponse{
+			StatusCode: http.StatusBadRequest,
+			Body: err.Error(),
+		}, nil
+	}
+
+	return events.APIGatewayProxyResponse{
+		StatusCode: http.StatusNoContent,
+	}, nil
+
+}
+
 func handler(request events.APIGatewayProxyRequest) (events.APIGatewayProxyResponse, error) {
 	switch request.HTTPMethod {
 	case "GET":
 		return getItem(request)
 	case "POST":
 		return putItem(request)
+	case "PUT":
+		return updateItem(request)
+	case "DELETE":
+		return deleteItem(request)
 	default:
 		return events.APIGatewayProxyResponse{
 			StatusCode: http.StatusMethodNotAllowed,
