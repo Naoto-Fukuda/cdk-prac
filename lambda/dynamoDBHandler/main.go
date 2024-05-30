@@ -93,51 +93,57 @@ func putItem(request events.APIGatewayProxyRequest) (events.APIGatewayProxyRespo
 	}, nil
 }
 
-func updateItem(request events.APIGatewayProxyRequest) (events.APIGatewayProxyResponse, error){
+func updateItem(request events.APIGatewayProxyRequest) (events.APIGatewayProxyResponse, error) {
 	item := Item{}
 	err := json.Unmarshal([]byte(request.Body), &item)
 	if err != nil {
 		return events.APIGatewayProxyResponse{
 			StatusCode: http.StatusBadRequest,
-			Body: err.Error(),
+			Body:       err.Error(),
 		}, nil
 	}
-	input := dynamodb.UpdateItemInput{
+	input := &dynamodb.UpdateItemInput{
 		TableName: aws.String(tableName),
 		Key: map[string]*dynamodb.AttributeValue{
 			"id": {
 				S: aws.String(item.ID),
 			},
 		},
+		UpdateExpression: aws.String("set Content = :c"),
+		ExpressionAttributeValues: map[string]*dynamodb.AttributeValue{
+			":c": {
+				S: aws.String(item.Content),
+			},
+		},
 	}
 
-	_, err = dynamoDb.UpdateItem(&input)
+	_, err = dynamoDb.UpdateItem(input)
 	if err != nil {
 		return events.APIGatewayProxyResponse{
 			StatusCode: http.StatusBadRequest,
-			Body: err.Error(),
+			Body:       err.Error(),
 		}, nil
 	}
 
 	return events.APIGatewayProxyResponse{
 		StatusCode: http.StatusNoContent,
-		Body: "アイテムが更新されました。",
+		Body:       "アイテムが更新されました。",
 	}, nil
 }
 
-func deleteItem(request events.APIGatewayProxyRequest) (events.APIGatewayProxyResponse, error){
+func deleteItem(request events.APIGatewayProxyRequest) (events.APIGatewayProxyResponse, error) {
 	item := Item{}
 	err := json.Unmarshal([]byte(request.Body), &item)
 	if err != nil {
 		return events.APIGatewayProxyResponse{
 			StatusCode: http.StatusBadRequest,
-			Body: err.Error(),
+			Body:       err.Error(),
 		}, nil
 	}
 
 	input := dynamodb.DeleteItemInput{
 		TableName: aws.String(tableName),
-		Key: map[string] *dynamodb.AttributeValue{
+		Key: map[string]*dynamodb.AttributeValue{
 			"id": {
 				S: aws.String(item.ID),
 			},
@@ -147,7 +153,7 @@ func deleteItem(request events.APIGatewayProxyRequest) (events.APIGatewayProxyRe
 	if err != nil {
 		return events.APIGatewayProxyResponse{
 			StatusCode: http.StatusBadRequest,
-			Body: err.Error(),
+			Body:       err.Error(),
 		}, nil
 	}
 
